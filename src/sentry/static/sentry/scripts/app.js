@@ -14,7 +14,7 @@
         },
 
         initialize: function(data){
-            _.bindAll(this);
+            Backbone.View.prototype.initialize.apply(this, arguments);
 
             if (_.isUndefined(data))
                 data = {};
@@ -84,7 +84,7 @@
     app.StreamPage = BasePage.extend({
 
         initialize: function(data){
-            BasePage.prototype.initialize.call(this, data);
+            BasePage.prototype.initialize.apply(this, arguments);
 
             this.group_list = new app.GroupListView({
                 className: 'group-list',
@@ -182,7 +182,7 @@
     app.DashboardPage = BasePage.extend({
 
         initialize: function(data){
-            BasePage.prototype.initialize.call(this, data);
+            BasePage.prototype.initialize.apply(this, arguments);
 
             $('#chart').height('150px');
             Sentry.charts.render('#chart');
@@ -193,7 +193,7 @@
     app.SelectTeamPage = BasePage.extend({
 
         initialize: function(){
-            BasePage.prototype.initialize.call(this);
+            BasePage.prototype.initialize.apply(this, arguments);
 
             this.refreshSparklines();
             $(window).on('resize', this.refreshSparklines);
@@ -246,7 +246,7 @@
     app.GroupDetailsPage = BasePage.extend({
 
         initialize: function(data){
-            BasePage.prototype.initialize.call(this, data);
+            BasePage.prototype.initialize.apply(this, arguments);
 
             this.group_list = new app.GroupListView({
                 className: 'group-list',
@@ -358,7 +358,7 @@
 
     app.WallPage = BasePage.extend({
         initialize: function(){
-            BasePage.prototype.initialize.call(this, {
+            BasePage.prototype.initialize.apply(this, {
                 realtime: true,
                 pollTime: 3000
             });
@@ -366,6 +366,8 @@
             this.sparkline = $('.chart');
             this.sparkline.height(this.sparkline.parent().height());
             this.stats = $('#stats');
+
+            _.bindAll(this, 'refreshStats');
 
             this.refreshSparkline();
             this.refreshStats();
@@ -474,50 +476,36 @@
 
     });
 
-    app.UserListPage = BasePage.extend({
-
-        initialize: function(data){
-            BasePage.prototype.initialize.call(this, data);
-
-            this.list = new app.UserListView({
-                className: 'user-list',
-                id: 'user_list',
-                members: data.users
-            });
-        }
-
-    });
-
     app.AddTeamMemberPage = BasePage.extend({
     });
 
     app.AccessGroupMembersPage = BasePage.extend({
-        initialize: function(data){
-            BasePage.prototype.initialize.call(this, data);
+        initialize: function(){
+            BasePage.prototype.initialize.apply(this, arguments);
 
             app.utils.makeSearchableUsersInput('form input[name=user]');
         }
     });
 
     app.AccessGroupProjectsPage = BasePage.extend({
-        initialize: function(data){
-            BasePage.prototype.initialize.call(this, data);
+        initialize: function(){
+            BasePage.prototype.initialize.apply(this, arguments);
 
             app.utils.makeSearchableProjectsInput('form input[name=project]');
         }
     });
 
     app.TeamDetailsPage = BasePage.extend({
-        initialize: function(data){
-            BasePage.prototype.initialize.call(this, data);
+        initialize: function(){
+            BasePage.prototype.initialize.apply(this, arguments);
 
             app.utils.makeSearchableUsersInput('form input[name=owner]');
         }
     });
 
     app.ProjectDetailsPage = BasePage.extend({
-        initialize: function initialize(data){
-            BasePage.prototype.initialize.call(this, data);
+        initialize: function(){
+            BasePage.prototype.initialize.apply(this, arguments);
 
             app.utils.makeSearchableUsersInput('form input[name=owner]');
 
@@ -572,8 +560,8 @@
     });
 
     app.ProjectNotificationsPage = BasePage.extend({
-        initialize: function initialize(data){
-            BasePage.prototype.initialize.call(this, data);
+        initialize: function(){
+            BasePage.prototype.initialize.apply(this, arguments);
 
             $("input[type=range]").each(_.bind(function loop(n, el){
                 var $el = $(el),
@@ -614,7 +602,7 @@
         initialize: function(data){
             this.el = $(data.el);
 
-            BasePage.prototype.initialize.call(this, data);
+            BasePage.prototype.initialize.apply(this, arguments);
 
             if (this.options.canSelectTeam && this.options.canCreateTeam) {
                 $('#new_team').hide();

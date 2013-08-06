@@ -43,7 +43,7 @@ if 'test' in sys.argv:
     setup_requires.append('pytest')
 
 dev_requires = [
-    'flake8>=1.7.0,<2.0',
+    'flake8>=2.0,<2.1',
 ]
 
 tests_require = [
@@ -115,7 +115,7 @@ class PyTest(TestCommand):
 
 setup(
     name='sentry',
-    version='6.0.0-epsilon',
+    version='6.0.1-epsilon',
     author='David Cramer',
     author_email='dcramer@gmail.com',
     url='http://www.getsentry.com',

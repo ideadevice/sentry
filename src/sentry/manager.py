@@ -24,7 +24,7 @@ from celery.signals import task_postrun
 from django.conf import settings
 from django.contrib.auth.models import UserManager
 from django.core.signals import request_finished
-from django.db import models, transaction, IntegrityError
+from django.db import models, router, transaction, IntegrityError
 from django.db.models import Sum
 from django.db.models.signals import post_save, post_delete, post_init, class_prepared
 from django.utils import timezone
@@ -215,6 +215,8 @@ class BaseManager(models.Manager):
                     raise ValueError('Unexpected value type returned from cache')
                 logger.error('Cache response returned invalid value %r', retval)
                 return self.get(**kwargs)
+
+            retval._state.db = router.db_for_read(self.model, **kwargs)
 
             return retval
         else:
@@ -428,18 +430,30 @@ class GroupManager(BaseManager, ChartMixin):
 
         trim_dict(data['extra'], max_size=MAX_EXTRA_VARIABLE_SIZE)
 
-        # HACK: move this to interfaces code
+        if 'sentry.interfaces.Exception' in data:
+            if 'values' not in data['sentry.interfaces.Exception']:
+                data['sentry.interfaces.Exception'] = {
+                    'values': [data['sentry.interfaces.Exception']]
+                }
+
+            # convert stacktrace + exception into expanded exception
+            if 'sentry.interfaces.Stacktrace' in data:
+                data['sentry.interfaces.Exception']['values'][0]['stacktrace'] = data.pop('sentry.interfaces.Stacktrace')
+
+            for exc_data in data['sentry.interfaces.Exception']['values']:
+                for key in ('type', 'module', 'value'):
+                    value = exc_data.get(key)
+                    if value:
+                        exc_data[key] = trim(value)
+                if exc_data.get('stacktrace'):
+                    for frame in exc_data['stacktrace']['frames']:
+                        stack_vars = frame.get('vars', {})
+                        trim_dict(stack_vars)
+
         if 'sentry.interfaces.Stacktrace' in data:
             for frame in data['sentry.interfaces.Stacktrace']['frames']:
                 stack_vars = frame.get('vars', {})
                 trim_dict(stack_vars)
-
-        if 'sentry.interfaces.Exception' in data:
-            exc_data = data['sentry.interfaces.Exception']
-            for key in ('type', 'module', 'value'):
-                value = exc_data.get(key)
-                if value:
-                    exc_data[key] = trim(value)
 
         if 'sentry.interfaces.Message' in data:
             msg_data = data['sentry.interfaces.Message']
@@ -475,7 +489,7 @@ class GroupManager(BaseManager, ChartMixin):
         return self.save_data(project, data)
 
     @transaction.commit_on_success
-    def save_data(self, project, data):
+    def save_data(self, project, data, raw=False):
         # TODO: this function is way too damn long and needs refactored
         # the inner imports also suck so let's try to move it away from
         # the objects manager
@@ -485,7 +499,7 @@ class GroupManager(BaseManager, ChartMixin):
         from sentry.plugins import plugins
         from sentry.models import Event, Project, EventMapping
 
-        project = Project.objects.get_from_cache(pk=project)
+        project = Project.objects.get_from_cache(id=project)
 
         # First we pull out our top-level (non-data attr) kwargs
         event_id = data.pop('event_id')
@@ -593,18 +607,19 @@ class GroupManager(BaseManager, ChartMixin):
         transaction.savepoint_commit(sid, using=using)
         transaction.commit_unless_managed(using=using)
 
-        send_group_processors(
-            group=group,
-            event=event,
-            is_new=is_new,
-            is_sample=is_sample
-        )
+        if not raw:
+            send_group_processors(
+                group=group,
+                event=event,
+                is_new=is_new,
+                is_sample=is_sample
+            )
 
         if settings.SENTRY_USE_SEARCH:
             index_event.delay(event)
 
         # TODO: move this to the queue
-        if is_new:
+        if is_new and not raw:
             regression_signal.send_robust(sender=self.model, instance=group)
 
         return event

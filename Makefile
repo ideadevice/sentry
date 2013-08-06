@@ -13,6 +13,7 @@ develop: update-submodules
 	pip install -q "file://`pwd`#egg=sentry[dev]" --use-mirrors
 	pip install -q "file://`pwd`#egg=sentry[tests]" --use-mirrors
 	pip install -q -e . --use-mirrors
+	make setup-git
 
 dev-postgres:
 	pip install -q "file://`pwd`#egg=sentry[dev]" --use-mirrors
@@ -26,6 +27,10 @@ dev-mysql:
 
 dev-docs:
 	pip install -q -r docs/requirements.txt --use-mirrors
+
+setup-git:
+	git config branch.autosetuprebase always
+	cd .git/hooks && ln -sf ../../hooks/* ./
 
 build: locale
 
@@ -82,7 +87,7 @@ lint: lint-python lint-js
 
 lint-python:
 	@echo "Linting Python files"
-	flake8 --exclude=migrations,src/sentry/static/CACHE/* --ignore=E501,E225,E121,E123,E124,E125,E127,E128 src/sentry
+	PYFLAKES_NODOCTEST=1 flake8 src/sentry
 	@echo ""
 
 lint-js:
